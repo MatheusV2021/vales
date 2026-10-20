@@ -1,0 +1,3 @@
+import { ArrowRight, Check } from 'lucide-react';
+import ValeIcon from './ValeIcon';
+export default function ValeCard({vale,compact=false,onClick}) {return <button type="button" onClick={()=>onClick(vale)} className={`vale-card theme-${vale.tema||'pink'} ${compact?'vale-compact':''} ${vale.usado?'is-used':''}`} aria-label={`Abrir vale: ${vale.titulo}`}><ValeIcon tipo={vale.icone} size={compact?29:36}/><div className="vale-card-content"><strong>{vale.titulo}</strong><span>{vale.usado?'Vale utilizado':'1 uso'}</span></div>{!compact&&<span className={`status-pill ${vale.usado?'spent':''}`}>{vale.usado?'Utilizado':'Disponível'}</span>}<span className="arrow-dot">{vale.usado?<Check size={17}/>:<ArrowRight size={17}/>}</span></button>}

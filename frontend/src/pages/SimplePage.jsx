@@ -1,0 +1,3 @@
+import { Heart, UserRound } from 'lucide-react';
+import ValeCard from '../components/ValeCard';
+export default function SimplePage({tipo,vales,onValeClick,validade}){if(tipo==='favoritos')return <section className="simple-page"><Heart size={34}/><h1>Seus favoritos</h1><p>Seus momentos mais especiais em um só lugar.</p><div className="vales-list">{vales.filter(v=>!v.usado).slice(0,3).map(v=><ValeCard key={v.id} vale={v} onClick={onValeClick}/>)}</div></section>;return <section className="simple-page"><UserRound size={36}/><h1>Feito pra você 💜</h1><p>Uma carteirinha de momentos nossos, preparada com muito carinho.</p><div className="profile-date">Validade: {new Date(`${validade}T12:00:00`).toLocaleDateString('pt-BR')}</div></section>}

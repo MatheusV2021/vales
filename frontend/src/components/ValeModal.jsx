@@ -1,0 +1,9 @@
+import { useEffect,useState } from 'react';
+import { X, CalendarDays, Heart, CheckCircle2 } from 'lucide-react';
+import ValeIcon from './ValeIcon';
+export default function ValeModal({vale,onClose,onResgatar,busy,modoDemo,validade}){
+  const [confirmar,setConfirmar]=useState(false);
+  useEffect(()=>{function esc(e){if(e.key==='Escape')onClose()}window.addEventListener('keydown',esc);return()=>window.removeEventListener('keydown',esc)},[onClose]);
+  if(!vale)return null;
+  return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}><section className="vale-modal" role="dialog" aria-modal="true" aria-label={vale.titulo}><button className="modal-close" onClick={onClose} aria-label="Fechar"><X size={22}/></button><div className={`modal-art theme-${vale.tema}`}><ValeIcon tipo={vale.icone} size={64}/></div><span className="modal-eyebrow">UM PRESENTINHO PRA VOCÊ 💜</span><h2>{vale.titulo}</h2><p>{vale.descricao}</p><div className="validade-note"><CalendarDays size={17}/> Válido até {new Date(`${validade}T12:00:00`).toLocaleDateString('pt-BR')}</div>{vale.usado?<div className="used-notice"><CheckCircle2 size={20}/> Esse vale já foi utilizado.</div>:modoDemo?<div className="demo-notice">Prévia sem conexão com a API. O resgate está desativado para evitar perder seus vales.</div>:confirmar?<><p className="confirm-message">Tem certeza? Depois de resgatado, este vale não poderá ser usado novamente.</p><button disabled={busy} className="primary-action" onClick={()=>onResgatar(vale.id)}>{busy?'Resgatando...':'Sim, usar meu vale'}</button><button className="secondary-action" onClick={()=>setConfirmar(false)}>Voltar</button></>:<button className="primary-action" onClick={()=>setConfirmar(true)}><Heart size={18}/> Usar este vale</button>}</section></div>
+}
