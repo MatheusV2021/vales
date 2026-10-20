@@ -1,80 +1,58 @@
 # Carteira de Vales 💜
 
-Aplicação **mobile-first** baseada na imagem enviada. Organização inspirada no frontend do [PresenSee](https://github.com/SIN-disciplina-PI5/FRONT-END-PRESENSEE): React + Vite, páginas, componentes, dados, serviços e CSS em pastas separadas.
+Projeto mobile-first feito em React + Vite, seguindo a organização em `pages`, `components`, `services` e `styles`. Backend FastAPI, SQLite para desenvolvimento e PostgreSQL persistente para produção. Vales somente visualizados no frontend; cadastro é exclusivo da API administrativa.
 
-## Estrutura
+## Desenvolvimento local
 
-```text
-carteira-vales/
-├── frontend/
-│   ├── src/
-│   │   ├── components/   # BottomNav, ValeCard, ValeIcon, ValeModal
-│   │   ├── data/         # vales de exemplo (somente prévia)
-│   │   ├── pages/        # Home, Vales, SimplePage
-│   │   ├── services/     # chamadas à API
-│   │   ├── styles/       # CSS separado do JSX
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── package.json
-│   └── vercel.json
-└── backend/
-    ├── main.py          # API FastAPI + SQLite
-    ├── seed.py          # cadastro inicial, executado uma vez
-    └── requirements.txt
-```
-
-## Como executar
-
-Requer Python 3.10+ e Node 20+.
-
-**Terminal 1 — API**
-
+### API
 ```bash
 cd backend
 python -m venv .venv
 # Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
+# Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
-python seed.py
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload
 ```
 
-**Terminal 2 — site**
+Ao iniciar, a API cria o banco local e cadastra 10 vales **uma única vez**. Não execute seed manualmente no Render. Acesse `http://localhost:8000/api/health`.
 
+### Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Abra `http://localhost:5173` no navegador. Para testar no celular na mesma rede, execute o Vite com `--host`; configure `VITE_API_URL` para o endereço IP acessível da API (o proxy local só funciona através do servidor Vite).
+Acesse `http://localhost:5173`. Durante desenvolvimento, Vite encaminha `/api` para o servidor Python na porta 8000. Não configure `VITE_API_URL` no `.env` local para usar o proxy.
 
-## Regras
+## Render — publicação da API
 
-- O site **não tem formulário de cadastro**: lista os vales fornecidos pela API.
-- Toque num vale para visualizar detalhes e solicitar seu resgate.
-- Após a confirmação, o backend faz um UPDATE condicional **atômico**. Um segundo resgate responde HTTP 409, inclusive em concorrência.
-- Depois de 20/12/2026, a API bloqueia novos resgates (HTTP 403).
-- Caso a API esteja fora do ar, é exibida uma prévia com dados fictícios; **o resgate fica bloqueado**. Nenhum estado de uso é salvo apenas no navegador.
-- O seed cadastra 10 vales todos disponíveis. Modifique `backend/seed.py` **antes da primeira execução** para alterar os vales iniciais.
+1. Suba o projeto no GitHub (ambas as pastas e `render.yaml` na raiz).
+2. Crie um banco **PostgreSQL persistente** (Render Postgres pago ou provedor externo, como Neon). Copie a URL de conexão. Um serviço gratuito do Render não preserva arquivos SQLite entre deploys/reinicializações, logo **não use SQLite em produção**.
+3. Em Render, escolha **New > Blueprint**, conecte o repositório e selecione o `render.yaml`. Alternativamente, crie **Web Service** com Root Directory `backend`, runtime Python, build `pip install -r requirements.txt` e start `uvicorn main:app --host 0.0.0.0 --port $PORT`.
+4. Configure no serviço as variáveis:
+   - `DATABASE_URL`: URL PostgreSQL. Para driver psycopg use `postgresql+psycopg://...`; URLs `postgresql://...` e `postgres://...` são convertidas automaticamente para o driver instalado (`psycopg`).
+   - `FRONTEND_ORIGINS`: URL exata da Vercel, ex. `https://minha-carteira.vercel.app`. Pode usar múltiplas URLs separadas por vírgulas.
+   - `ADMIN_TOKEN`: token secreto gerado pelo Render Blueprint.
+   - `VALIDADE`: `2026-12-20`.
+5. Confira `https://SEU-SERVICO.onrender.com/api/health`. Ao iniciar, a API cria as tabelas e cadastra 10 vales se o banco estiver vazio.
 
-## Cadastro administrativo (fora do site)
+**Importante:** o Render Free pode entrar em suspensão e demorar a atender o primeiro acesso. Isso não altera a persistência do PostgreSQL.
 
-Configure a variável de ambiente `ADMIN_TOKEN` somente no backend. Com a API em execução:
+## Vercel — publicação do site
 
-```bash
-curl -X POST http://localhost:8000/api/admin/vales \
-  -H 'Authorization: Bearer SEU_TOKEN' \
-  -H 'Content-Type: application/json' \
-  -d '{"titulo":"Vale passeio","descricao":"Passeio especial","icone":"heart","tema":"pink"}'
-```
+1. Crie/import o mesmo repositório na Vercel.
+2. Configure **Root Directory: `frontend`**. Framework Preset: **Vite**; Build Command: `npm run build`; Output Directory: `dist`.
+3. Em Settings > Environment Variables adicione `VITE_API_URL=https://SEU-SERVICO.onrender.com` (sem `/api` nem barra final).
+4. Faça Deploy. As rotas React (`/vales`, `/favoritos`, `/perfil`) usam o rewrite definido em `frontend/vercel.json`.
+5. Atualize `FRONTEND_ORIGINS` no Render com a URL definitiva do seu site na Vercel, e reinicie/deploy a API se necessário.
+6. Toda vez que mudar `VITE_API_URL`, faça novo deploy na Vercel para recompilar.
 
-Não coloque `ADMIN_TOKEN` em arquivos `VITE_` ou no frontend.
+## Resgate e segurança
 
-## Deploy
-
-**Frontend / Vercel:** selecione a pasta `frontend` como Root Directory, comando `npm run build`, output `dist`, e adicione `VITE_API_URL=https://sua-api.example.com`.
-
-**API / Render ou outra hospedagem Python:** root `backend`, build `pip install -r requirements.txt`, start `uvicorn main:app --host 0.0.0.0 --port $PORT`; defina `FRONTEND_ORIGINS`, `ADMIN_TOKEN`, `VALIDADE`, `DB_PATH`. Execute `python seed.py` uma vez no **mesmo armazenamento persistente** antes de disponibilizar o serviço. No Render, discos persistentes normalmente exigem plano com disco; sem armazenamento persistente o banco SQLite pode ser perdido em reinícios/deploys. Para produção real, use volume persistente ou migre para PostgreSQL.
-
-**Observação de segurança:** a rota pública de resgate não exige autenticação, adequada apenas para uma carteira privada compartilhada por um link controlado. Se o site ficar público, configure autenticação antes de disponibilizar vales reais.
+- `GET /api/vales` retorna os vales. `POST /api/vales/{id}/resgatar` marca como usado permanentemente.
+- `UPDATE` condicional em transação evita resgates duplicados simultâneos (409 se já usado).
+- A partir de 21/12/2026 não é possível resgatar.
+- `POST /api/admin/vales` exige cabeçalho `Authorization: Bearer SEU_ADMIN_TOKEN`. **Nunca coloque o token no frontend nem em uma variável `VITE_`.**
+- Quando API está indisponível, o site não exibe vales fictícios, nem permite resgate.
+- **A rota de resgate é pública.** Quem conhece a URL pode resgatar um vale; para impedir resgates de terceiros, adicione autenticação antes de divulgar o site publicamente. CORS não substitui autenticação.
